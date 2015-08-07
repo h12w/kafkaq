@@ -51,6 +51,16 @@ func New(config *Config) (*Q, error) {
 }
 
 func (q *Q) PopTo(o *Q, v interface{}) error {
+	if v == nil {
+		buf, err := q.PeekBytes()
+		if err != nil {
+			return err
+		}
+		if err := o.PutBytes(buf); err != nil {
+			return err
+		}
+		return q.Commit()
+	}
 	if err := q.Peek(v); err != nil {
 		return err
 	}
@@ -67,7 +77,7 @@ type Producer struct {
 
 func NewProducer(config *Config) (*Producer, error) {
 	scfg := sarama.NewConfig()
-	scfg.Producer.Partitioner = sarama.NewRoundRobinPartitioner
+	scfg.Producer.Partitioner = sarama.NewRandomPartitioner
 	producer, err := sarama.NewSyncProducer(config.KafkaAddrs, scfg)
 	if err != nil {
 		return nil, err
@@ -106,13 +116,14 @@ type Consumer struct {
 func NewConsumer(config *Config) (*Consumer, error) {
 	scfg := siesta.NewConnectorConfig()
 	scfg.BrokerList = config.KafkaAddrs
+	scfg.FetchMaxWaitTime = 3600 * 1000 // TODO: loop between timeout
 	c, err := siesta.NewDefaultConnector(scfg)
 	if err != nil {
 		return nil, err
 	}
 	offset, err := c.GetOffset(config.ConsumerGroup, config.Topic, config.Partition)
 	if err != nil {
-		fmt.Println(err)
+		// TODO: handle error properly
 		offset = 0
 	}
 	return &Consumer{
@@ -130,6 +141,7 @@ func (c *Consumer) Pop(v interface{}) error {
 			return err
 		}
 	}
+	fmt.Printf("pop %#v\n", v)
 	return c.Commit()
 }
 
@@ -155,7 +167,8 @@ func (c *Consumer) PeekBytes() ([]byte, error) {
 	messages := r.Data[c.topic][c.Partition].Messages
 	for _, msg := range messages {
 		if msg.Offset == c.offset {
-			return messages[0].Message.Value, nil
+			value := messages[0].Message.Value
+			return value, nil
 		}
 	}
 	// TODO: handle buffer
