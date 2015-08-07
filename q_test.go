@@ -35,6 +35,7 @@ func TestPutGet(t *testing.T) {
 		KafkaAddrs:     []string{kafkaHost},
 		ZooKeeperAddrs: []string{zooKeeperHost},
 		Topic:          topic,
+		PartitionCount: 1,
 		ConsumerConfig: ConsumerConfig{
 			ConsumerGroup: topic,
 			Partition:     0,
@@ -227,8 +228,9 @@ func TestPopTo(t *testing.T) {
 
 func newQ(t *testing.T, topic string) *Q {
 	q, err := New(&Config{
-		KafkaAddrs: []string{kafkaHost},
-		Topic:      topic,
+		KafkaAddrs:     []string{kafkaHost},
+		Topic:          topic,
+		PartitionCount: 1,
 		ConsumerConfig: ConsumerConfig{
 			ConsumerGroup: topic,
 			Partition:     0,

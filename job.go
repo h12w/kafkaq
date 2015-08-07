@@ -38,22 +38,25 @@ func NewJobQ(config *JobQConfig) (*JobQ, error) {
 	// TODO: heartbeat
 	errCh := make(chan error)
 	inputQ, err := New(&Config{
-		KafkaAddrs: config.Addrs,
-		Topic:      config.JobQTopic,
+		KafkaAddrs:     config.Addrs,
+		Topic:          config.JobQTopic,
+		PartitionCount: config.ConsumerCount,
 		ConsumerConfig: ConsumerConfig{
 			ConsumerGroup: config.JobQTopic,
 		},
 	})
 	doneQ, err := New(&Config{
-		KafkaAddrs: config.Addrs,
-		Topic:      config.DoneQTopic,
+		KafkaAddrs:     config.Addrs,
+		Topic:          config.DoneQTopic,
+		PartitionCount: 1,
 		ConsumerConfig: ConsumerConfig{
 			ConsumerGroup: config.DoneQTopic,
 		},
 	})
 	failQ, err := New(&Config{
-		KafkaAddrs: config.Addrs,
-		Topic:      config.FailQTopic,
+		KafkaAddrs:     config.Addrs,
+		Topic:          config.FailQTopic,
+		PartitionCount: 1,
 		ConsumerConfig: ConsumerConfig{
 			ConsumerGroup: config.FailQTopic,
 		},

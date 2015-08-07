@@ -3,20 +3,15 @@ package kafkaq
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 
-	"github.com/Shopify/sarama"
-	"github.com/stealthly/siesta"
+	"github.com/h12w/siesta"
 )
-
-func init() {
-	//sarama.Logger = log.New(os.Stdout, "[Sarama] ", log.LstdFlags)
-}
 
 type Config struct {
 	KafkaAddrs     []string
 	ZooKeeperAddrs []string
 	Topic          string
+	PartitionCount int
 	ConsumerConfig
 }
 
@@ -71,14 +66,16 @@ func (q *Q) PopTo(o *Q, v interface{}) error {
 }
 
 type Producer struct {
-	p     sarama.SyncProducer
+	p     *siesta.SyncProducer
 	topic string
 }
 
 func NewProducer(config *Config) (*Producer, error) {
-	scfg := sarama.NewConfig()
-	scfg.Producer.Partitioner = sarama.NewRandomPartitioner
-	producer, err := sarama.NewSyncProducer(config.KafkaAddrs, scfg)
+	scfg := siesta.NewSyncProducerConfig()
+	scfg.PartitionCount = config.PartitionCount
+	scfg.Topic = config.Topic
+	scfg.Addrs = config.KafkaAddrs
+	producer, err := siesta.NewSyncProducer(scfg)
 	if err != nil {
 		return nil, err
 	}
@@ -97,13 +94,7 @@ func (p *Producer) Put(v interface{}) error {
 }
 
 func (p *Producer) PutBytes(buf []byte) error {
-	message := &sarama.ProducerMessage{
-		Topic:     p.topic,
-		Partition: -1,
-		Value:     sarama.ByteEncoder(buf),
-	}
-	_, _, err := p.p.SendMessage(message)
-	return err
+	return p.p.Send(buf)
 }
 
 type Consumer struct {
@@ -141,7 +132,6 @@ func (c *Consumer) Pop(v interface{}) error {
 			return err
 		}
 	}
-	fmt.Printf("pop %#v\n", v)
 	return c.Commit()
 }
 
